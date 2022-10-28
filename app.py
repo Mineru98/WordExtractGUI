@@ -1,5 +1,6 @@
 import sys
 import requests
+import platform
 from PyInstaller.utils.hooks import collect_data_files
 from bs4 import BeautifulSoup
 from PyQt6.QtCore import QCoreApplication
@@ -167,7 +168,7 @@ class MyApp(QMainWindow):
                 QMessageBox.warning(self, '경고', '지원하지 않는 파일 형식입니다.\n txt 파일만 지원합니다.')
 
     def btn_fun_crawling(self):
-        if (self.url.startswith("http://") or self.url.startswith("https://")) and "blog.naver.com" in self.url:
+        if (self.url.startswith("http://") or self.url.startswith("https://")) and "blog.naver.com" in self.url and "m.blog.naver.com" not in self.url:
             res = requests.get(self.url)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.content, "lxml")
@@ -199,6 +200,8 @@ class MyApp(QMainWindow):
         else:
             if self.url in "blog.naver.com":
                 QMessageBox.warning(self, '경고', 'https:// 나 https://로 시작해야 합니다.')
+            elif self.url in "m.blog.naver.com":
+                QMessageBox.warning(self, '경고', '현재는 모바일 네이버 블로그는 지원하지 않습니다.')
             else:
                 QMessageBox.warning(self, '경고', '현재는 네이버 블로그만 지원합니다.')
 
@@ -211,6 +214,15 @@ class MyApp(QMainWindow):
 
         self.extract_image_btn.setVisible(False)
         self.extract_excel_btn.setVisible(False)
+        
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["단어", "빈도수"])
+        for row in self.noun_list:
+            ws.append(row)
+        wb.save("내 글 빈도수.xlsx")
+
 
     def btn_fun_extract_image(self):
         if self.last_mode == "file":
@@ -223,7 +235,10 @@ class MyApp(QMainWindow):
         self.extract_excel_btn.setVisible(False)
 
         from wordcloud import WordCloud
-        wc = WordCloud(font_path='E:\\SourceCode\\WordExtractGUI\\font\\NanumBarunGothic.ttf', width=400, height=400, scale=2.0, max_font_size=240)
+        if platform.system() == "Windows":
+            wc = WordCloud(font_path='C:\Windows\Fonts\malgun.ttf', width=400, height=400, scale=2.0, max_font_size=240)
+        else:
+            wc = WordCloud(font_path='/Users/mineru/Library/Fonts/NanumBarunGothic.ttf', width=400, height=400, scale=2.0, max_font_size=240)
         wc.generate_from_frequencies(self.count)
         wc.to_file('내 글 빈도수.png')
 
@@ -283,7 +298,10 @@ class MyApp(QMainWindow):
         try:
             from konlpy.tag import Okt
             from collections import Counter
-            noun = Okt().nouns(text)
+            if platform.system() == "Windows":
+                noun = Okt().nouns(text)
+            else:
+                noun = Okt(jvmpath="/Library/Java/JavaVirtualMachines/zulu-15.jdk/Contents/Home/lib/server/libjvm.dylib").nouns(text)
             for i, v in enumerate(noun):
                 if len(v) < 2:
                     noun.pop(i)
